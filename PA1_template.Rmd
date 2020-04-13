@@ -7,19 +7,87 @@ output:
 
 
 ## Loading and preprocessing the data
-
-
+```{r}
+if (!file.exists("activity.csv")) { 
+        unzip("activity.zip")}
+dat <- read.csv("activity.csv", )
+```
 
 ## What is mean total number of steps taken per day?
+Total steps per day:
+```{r}
+totalstepsperday <- tapply(dat$steps, dat$date, sum, na.rm = TRUE)
+totalstepsperday
+```
 
-
+Histogram, mean, and median of total steps per day:
+```{r}
+hist(totalstepsperday)
+mean(totalstepsperday)
+median(totalstepsperday)
+```
 
 ## What is the average daily activity pattern?
+Time Series Plot:
+```{r}
+meanstepsperinterval <- tapply(dat$steps, dat$interval, mean, na.rm = TRUE)
+plot(names(meanstepsperinterval),
+     meanstepsperinterval, 
+     type="l",
+     ylab="Average Number of Steps",
+     xlab="5-min Interval")
+```
 
-
+Interval with max number of steps on average across all days:
+```{r}
+names(which.max(meanstepsperinterval))
+```
 
 ## Imputing missing values
+Total number of NAs:
+```{r}
+sum(is.na(dat))
+```
 
+New dataset imputing NAs with means for that 5min interval across all days:
+```{r}
+impdat <- transform(dat, 
+                    steps = ifelse (is.na(dat$steps), meanstepsperinterval, dat$steps))
+```
 
+New histogram, mean, and median of total steps per day:
+```{r}
+imptotalstepsperday <- tapply(impdat$steps, impdat$date, sum)
+hist(imptotalstepsperday)
+mean(imptotalstepsperday)
+median(imptotalstepsperday)
+```
+
+Difference in total daily number of steps, mean, and median compared to previous:
+```{r}
+imptotalstepsperday - totalstepsperday
+mean(imptotalstepsperday) - mean(totalstepsperday)
+median(imptotalstepsperday) - median(totalstepsperday)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+New factor variable with weekday/weekend.
+```{r}
+library(dplyr)
+Day <- weekdays(as.Date(impdat$date))
+impdat <- mutate(impdat, Weekendstat = factor(Day %in% c("Saturday", "Sunday"), 
+                                              labels = c("Weekday", "Weekend")))
+```
+
+Panel plot:
+```{r}
+impmeanstepsperinterval <- aggregate(steps ~ interval + Weekendstat, impdat, mean)
+library(ggplot2)
+ggplot(data = impmeanstepsperinterval, aes(x = interval, y = steps)) + 
+  geom_line() +
+  facet_grid(Weekendstat ~ .) +
+  ggtitle("Average Daily Activity Pattern") +
+  xlab("5min Interval") +
+  ylab("Average Steps")
+```
+
